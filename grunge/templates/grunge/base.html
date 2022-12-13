@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Playlist</title>
+    </head>
+ 
+
+    <body>
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            
+            <div class="collapse navbar-collapse d-flex justify-content-between" id="navbarNavDropdown">
+                <ul class="navbar-nav">
+                    <li class="nav-item active">
+                    <a class="nav-link" href="{% url 'playlist_list' %} ">Playlists <span class="sr-only">(current)</span></a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'playlist_create' %} ">Create Playlist </a>
+                    </li>
+
+                </ul>
+            </div>
+          </nav>
+    {% block content %}{% endblock content %}
+    </body>
+
+</html>
