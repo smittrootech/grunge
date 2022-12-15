@@ -25,7 +25,7 @@ class TrackAlbumSerializer(serializers.ModelSerializer):
         fields = ("uuid", "url", "name", "artist")
 
 
-class MembershipSerializer(serializers.ModelSerializer):
+class SequenceSerializer(serializers.ModelSerializer):
     """Used as a nested serializer by MemberSerializer"""
 
     # track_name= serializers.CharField(source='track.name')
@@ -92,7 +92,7 @@ class ArtistSerializer(serializers.ModelSerializer):
 class PlaylistSerializer(WritableNestedModelSerializer,serializers.ModelSerializer):
     uuid = serializers.ReadOnlyField()
     url = UUIDHyperlinkedIdentityField(view_name="playlist-detail")
-    tracks=MembershipSerializer(source='sequence_track',many=True)
+    tracks=SequenceSerializer(source='sequence_track',many=True)
 
     class Meta:
         model = Playlist

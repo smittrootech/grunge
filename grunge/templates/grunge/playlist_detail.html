@@ -146,7 +146,8 @@
                             location.reload();        
                         },
                         error: function(data) {
-                            alert(data.responseJSON.error || "");
+                            console.log(">>>>>>",data)
+                            alert(data.responseJSON.error);
                         },     
                     }) 
             })

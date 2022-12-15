@@ -5,7 +5,8 @@ from uuid import UUID
 from . import BaseAPITestCase
 from rest_framework import status
 from rest_framework.reverse import reverse as drf_reverse
-
+import json
+import requests
 
 class PlaylistTests(BaseAPITestCase):
     def setUp(self):
@@ -43,18 +44,62 @@ class PlaylistTests(BaseAPITestCase):
         self.assertEqual(r.data["name"], self.playlist_name)
     
 
-    @skip
     def test_create_playlist(self):
-        # Should be able to create a playlist with 0 or more tracks.
-        raise NotImplementedError("This test case needs to be implemented.")
 
-    @skip
+            data =   { "name": "rock_musica",
+                        "tracks": [
+                            {
+                                    "track": 3041
+                            },
+                            {
+                                    "track": 1158
+                            }
+                        ]
+                     }
+
+            response = requests.post(
+                "http://127.0.0.1:8000/api/v1/playlists",
+                data=json.dumps(data),
+                headers={"Content-Type": "application/json"}
+            )
+            self.assertEqual(201, response.status_code)
+
+
+
+
     def test_update_playlist(self):
-        # Should be able to change a playlist's `name`, and add, remove,
-        # or re-order tracks.
-        raise NotImplementedError("This test case needs to be implemented.")
+        # url = drf_reverse(
+        #     "playlist-detail", kwargs={"version": self.version, "uuid": self.playlist_uuid}
+        # )
+        # r = self.client.get(url)
+        data={"name": "Melody",
+                "tracks": [
+                            {
+                                "track_sequence": 1,
+                                "track": 3041
+                            },
+                            {
+                                "track_sequence": 2,
+                                "track": 1158
+                            }
+                        ]
+            }
 
-    @skip
+        response = requests.patch(
+                "http://127.0.0.1:8000/api/v1/playlists/"+str(self.playlist_uuid),
+                data=json.dumps(data),
+                headers={"Content-Type": "application/json"}
+            )
+        if response.status_code ==200:
+            self.assertEqual(200, response.status_code)
+        else:
+            self.assertEqual(204, response.status_code)
+
     def test_delete_playlist(self):
         # Should be able to delete a playlist by `uuid`.
-        raise NotImplementedError("This test case needs to be implemented.")
+        response = requests.delete(
+                "http://127.0.0.1:8000/api/v1/playlists/"+str(self.playlist_uuid),
+                headers={"Content-Type": "application/json"}
+            )
+        print(response)
+        self.assertEqual(204, response.status_code)

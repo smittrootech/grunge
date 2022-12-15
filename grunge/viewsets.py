@@ -9,7 +9,7 @@ from rest_framework.response import Response
 import json
 from django.urls import reverse_lazy
 from django.views.generic.edit import CreateView
-from .forms import CreatePlaylistForm,PlayListForm
+from .forms import CreatePlaylistForm,PlayListForm,PlaylistCreateForm
 from django.forms import formset_factory
 from django.shortcuts import render, redirect
 from django.core.exceptions import ValidationError
@@ -21,6 +21,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
 from django.views import View
 from django.views.generic.edit import UpdateView
+from django.http import HttpResponseRedirect
 
 
 
@@ -76,14 +77,13 @@ class PlaylistSet(BaseAPIViewSet,viewsets.ModelViewSet):
             track['track_sequence']=track_sequence+1
             track_name=Track.objects.filter(id=track.get("track"))
             track_id=[i.id for i in track_name]
-            print(track_id)
             for seq in track_id:
                 sequence_created, created=SequenceTrack.objects.get_or_create(playlist_id=playlist_id,track_id=seq,track_sequence=track.get("track_sequence"))
             for track in track_name:
                 playlist_data.tracks.add(track.id)
 
         serializer=PlaylistSerializer(playlist_data,context={'request': request})
-        return Response(serializer.data)
+        return Response(serializer.data,status=201)
 
 
     def update(self, request, *args, **kwargs):
@@ -92,39 +92,48 @@ class PlaylistSet(BaseAPIViewSet,viewsets.ModelViewSet):
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
-        return Response(serializer.data)
+        return Response(serializer.data,status=204)
 
     def partial_update(self, request, *args, **kwargs):
         kwargs['partial'] = True
         return self.update(request, *args, **kwargs)
 
-    def perform_destroy(self, instance):
-        instance.delete()
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response(status=204)
 
 class AddPlaylistView(CreateView):
     model = Playlist
     form_class = CreatePlaylistForm
     template_name = 'grunge/create_playlist.html'
 
-    def post(self, request):
 
-        name = request.POST.get('name')
-        track = request.POST.get('track')
-        track_sequence = request.POST.get('track_sequence')
-        playlist_data, created =Playlist.objects.get_or_create(name=name)
-        playlist_id=Playlist.objects.get(name=name).id
-        track_name=Track.objects.get(id=track).id
+    def get_context_data(self, **kwargs):
+        context = super(AddPlaylistView, self).get_context_data(**kwargs)
+        if self.request.POST:
+            context['formset'] = PlaylistCreateForm(self.request.POST)
+        else:
+            context['formset'] = PlaylistCreateForm()
+        return context
 
-        check_same_track_exist=Playlist.objects.filter(id=playlist_id,tracks__id=track_name)
-        if check_same_track_exist:
-             raise ValidationError("already have this track in this playlist")
+    def post(self, request, *args, **kwargs):
+        formset = PlaylistCreateForm(request.POST)
+        if formset.is_valid():
+            for form in formset:
+                name =form.cleaned_data.get('name')
+                track = form.cleaned_data.get('track')
+                track_sequence = form.cleaned_data.get('track_sequence')
+                playlist_data, created =Playlist.objects.get_or_create(name=name)
+                playlist_id=Playlist.objects.get(name=name).id
+                track_name=Track.objects.get(id=track).id
+                SequenceTrack.objects.get_or_create(playlist_id=playlist_id,track_id=track_name,track_sequence=track_sequence)
+                playlist_data.tracks.add(track_name)
+            return redirect('playlist_detail',pk=playlist_id)
+        else:
+            return render(request, 'grunge/create_playlist.html', context={"formset":formset})
 
-        check_same_sequence_exist=SequenceTrack.objects.filter(playlist_id=playlist_id,track_sequence=track_sequence)
-        if check_same_sequence_exist:
-             raise ValidationError("already have duplicate sequence")
-        SequenceTrack.objects.get_or_create(playlist_id=playlist_id,track_id=track_name,track_sequence=track_sequence)
-        playlist_data.tracks.add(track_name)
-        return redirect('playlist_detail',pk=playlist_id)
+ 
 
 class PlayListView(ListView):
  
@@ -163,11 +172,7 @@ class PlayListDetail(DetailView):
         context = super(PlayListDetail, self).get_context_data(**kwargs)
         qs = SequenceTrack.objects.filter(playlist=self.object.id)
         order_by = self.request.GET.get('order_by')
-        # print(qs)
-        # qs = qs.order_by("track_sequence")
-        print(order_by)
-        if order_by:
-            qs.order_by(f"{order_by}")
+        qs = qs.order_by("track_sequence")
         paginator=Paginator(qs, 5)
         page_number = self.request.GET.get('page')
         context['sequence_tracks_list'] = paginator.get_page(page_number)
@@ -175,20 +180,7 @@ class PlayListDetail(DetailView):
         return context
 
 
-# class playlistUpdateName(UpdateView):
-#     # specify the model you want to use
-#     model = Playlist
-#     # template_name = 'grunge/playlist_summary.html'
-#     form_class=PlayListForm
 
-
-#     # def get_form(self, *args, **kwargs):
-#     #     form = super(playlistUpdateName, self).get_form(*args, **kwargs)
-#     #     form.fields["name"].widget.attrs["class"] = "form-group"
-#     #     return form
-  
-#     success_url ="/"
-    
 class PlayUpdateView(View):
 
     @method_decorator(csrf_exempt)
@@ -203,9 +195,8 @@ class PlayUpdateView(View):
         sequence=data.get('sequence')
         previous_sequence=data.get('previous_sequence')
         check_same_sequence_exist=SequenceTrack.objects.filter(playlist_id=playlist_id,track_sequence=sequence)
-        print(check_same_sequence_exist)
         if check_same_sequence_exist:
-             raise ValidationError("already have duplicate sequence")
+             return JsonResponse(data={"error":"sequence already exist"},status=401)
         track_detail=SequenceTrack.objects.filter(playlist_id=playlist_id,track_id=track)
         track_detail.update(track_sequence=sequence)
         return JsonResponse(data,safe=False)

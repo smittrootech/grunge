@@ -7,35 +7,62 @@
     <!--Bootstrap CSS-->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
   </head>
-
-    <body style="background-color:EFF0F0">
-
-        {% block content %}
-
-   
+  <body style="background-color:EFF0F0">
     
-        <div class="container my-5" style="background-color:white"> 
-                {% load crispy_forms_tags %}  
+    {% block content %}
+    
+    <h1>Create Playlist</h1>
+    
 
-                <form method="POST"  enctype="multipart/form-data">
-                
-                    <!-- Security token -->
-                    {% csrf_token %}
-                
-                    {{ form|crispy}}
-                    
-                    <div class="d-flex justify-content-center">
-                        <button class="btn btn-success" type="submit" id ='add_form'> Add </button>
-                    </div>
-                </form>
+    <div id="container"  class="container my-5" style="background-color:white"> 
+      <form id="form-container" method="POST">
+      
+            {% load crispy_forms_tags %}  
+              {% csrf_token %}
+              {{formset.management_form}}
+              {% for form in formset %}
+              <div class="playlist-form">
+                  {{form|crispy}}
+                    {% for error in form.errors %}
+                  {% endfor %}
+              </div>
+              
+              {% endfor %}
+              
+              <button class="btn btn-primary" type="button" id ='add-form'> Add </button>
+                          
+                          
+              <button class="btn btn-success" type="submit" id ='submit_form'> Create </button>
+                          
+          </form>
         </div>
+    
+    <script src="https://code.jquery.com/jquery-3.6.1.js" integrity="sha256-3zlB5s2uwoUzrXK3BT7AX3FyvojsraNFxCc2vC/7pNI=" crossorigin="anonymous"></script>
 
-    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+    <script>
+        let playlistForm = document.querySelectorAll(".playlist-form")
+        let container = document.querySelector("#form-container")
+        let addButton = document.querySelector("#add-form")
+        let totalForms = document.querySelector("#id_form-TOTAL_FORMS")
 
- {% endblock content %}
+        let formNum = playlistForm.length-1
+        addButton.addEventListener('click', addForm)
+        function addForm(e){
+            e.preventDefault()
+
+            {% comment %} $("#delete_last_form").html(`<button id="delete-form" type="button"   class="btn btn-danger">delete form</button>`) {% endcomment %}
+           
+            let newForm = playlistForm[0].cloneNode(true)
+            
+            let formRegex = RegExp(`form-(\\d){1}-`,'g')
+
+            formNum++
+            newForm.innerHTML = newForm.innerHTML.replace(formRegex, `form-${formNum}-`)
+            container.insertBefore(newForm, addButton)
+            
+            totalForms.setAttribute('value', `${formNum+1}`)
+        }
+    </script>
+
+    {% endblock content %}
 </body>
-
-
-
